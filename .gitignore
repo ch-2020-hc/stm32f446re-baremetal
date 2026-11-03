@@ -1,0 +1,37 @@
+# Out-of-source build directory (cmake -B build)
+build/
+
+# In-source CMake / Ninja configure, if it is ever run from the repo root
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+build.ninja
+.ninja_deps
+.ninja_log
+CMakeUserPresets.json
+compile_commands.json
+cmake-build-*/
+
+# Compiler and linker products
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.d
+*.su
+*.lst
+*.lss
+
+# Debug files
+*.pdb
+*.ilk
+
+# Editors and OS
+.vscode/
+.idea/
+.vs/
+Thumbs.db
+.DS_Store
+*.swp
