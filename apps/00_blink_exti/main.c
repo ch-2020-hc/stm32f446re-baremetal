@@ -17,9 +17,24 @@ volatile uint32_t g_result;
 
 void gpio_init(void)
 {
-    RCC_AHB1ENR |= 1U << 0 | 1U << 2; // Enable GPIOA and GPIOC
+    // Enable GPIOA and GPIOC
+    RCC_AHB1ENR |= (1U << 0) | (1U << 2); 
+    // Force a read of RCC_AHB1ENR to wait for clock to be ready
+    volatile uint32_t clock_ready = RCC_AHB1ENR;
+    (void)clock_ready;
 
+    // Set PA5 to output: bit 10&11 set to 1
+    GPIOA->MODER &= ~(3U << 10);
+    GPIOA->MODER |= (1U << 10); 
 
+    // Set PC13 to input: bit 26&27 set to 0
+    GPIOC->MODER &= ~(3U << 26); 
+    // On the Nucleo-F446RE, B1 (the blue button) ties PC13 to ground 
+    // while it is held. Released reads 1. Pressed reads 0.
+    // Set PC13 to pull-up: bit 26&27 set to 1
+    GPIOC->PUPDR &= ~(3U << 26);
+    GPIOC->PUPDR |= (1U << 26); 
+                             
 }
 
 int main(void)
@@ -35,6 +50,16 @@ int main(void)
 
     g_result = result;
 
+    gpio_init();
+
     while (1) {
+        // Check if button (pull-up) is pressed
+        if ((GPIOC->IDR & (1U << 13)) == 0) {
+            // Button is pressed
+            GPIOA->BSRR |= (1U << 5); // bit 5: bit set
+        } else {
+            // Button is not pressed
+            GPIOA->BSRR |= (1U << 21); // bit 21: bit reset
+        }
     }
 }

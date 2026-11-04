@@ -17,7 +17,6 @@ typedef struct {
 } GPIO_TypeDef;
 
 /*Peripheral base addresses*/
-
 #define GPIOA_BASE 0x40020000
 #define GPIOC_BASE 0x40020800
 
