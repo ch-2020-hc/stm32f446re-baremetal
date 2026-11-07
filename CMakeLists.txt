@@ -13,10 +13,14 @@ add_link_options(${CPU_FLAGS} -T${CMAKE_CURRENT_SOURCE_DIR}/ld/stm32f446re.ld -n
 # Source Code
 add_executable(firmware.elf
     startup/startup.s
+    drivers/src/rcc.c
+    drivers/src/gpio.c
+    drivers/src/exti.c
     apps/00_blink_exti/main.c
+
 )
 
-target_include_directories(firmware.elf PRIVATE drivers/include)
+target_include_directories(firmware.elf PRIVATE drivers/include cmsis)
 
 # Generate .bin file and size info
 add_custom_command(TARGET firmware.elf POST_BUILD

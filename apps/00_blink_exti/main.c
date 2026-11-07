@@ -1,44 +1,36 @@
-
-/* Checkpoint, still before any GPIO: 
-add three file-scope objects and watch them after reset. */
-
-// g_data == 0x12345678, g_bss == 0, and g_ro sits in the 0x0800xxxx range. If g_data is 0, 
-// the copy never ran or _sidata is wrong. If g_bss is garbage, the clear never ran.
-
 #include <stdint.h>
+#include "rcc.h"
 #include "gpio.h"
+#include "exti.h"
+#include "syscfg.h"
+#include "stm32f446re.h"
 
 uint32_t g_data = 0x12345678u;
 uint32_t g_data_tail = 0x9ABCDEF0u;
 uint32_t g_bss[4];
 const uint32_t g_ro = 0xA5A5A5A5u;
 
-volatile uint32_t g_result;
+volatile uint32_t g_result; // result of the checkpoint
 
-void gpio_init(void)
+volatile uint32_t g_exti_flag = 0; // flag to indicate that the EXTI line 13 is pending
+
+
+
+void EXTI15_10_IRQHandler(void)
 {
-    // Enable GPIOA and GPIOC
-    RCC_AHB1ENR |= (1U << 0) | (1U << 2); 
-    // Force a read of RCC_AHB1ENR to wait for clock to be ready
-    volatile uint32_t clock_ready = RCC_AHB1ENR;
-    (void)clock_ready;
-
-    // Set PA5 to output: bit 10&11 set to 1
-    GPIOA->MODER &= ~(3U << 10);
-    GPIOA->MODER |= (1U << 10); 
-
-    // Set PC13 to input: bit 26&27 set to 0
-    GPIOC->MODER &= ~(3U << 26); 
-    // On the Nucleo-F446RE, B1 (the blue button) ties PC13 to ground 
-    // while it is held. Released reads 1. Pressed reads 0.
-    // Set PC13 to pull-up: bit 26&27 set to 1
-    GPIOC->PUPDR &= ~(3U << 26);
-    GPIOC->PUPDR |= (1U << 26); 
-                             
+    // Check if EXTI_Line13 is pending
+    if (EXTI->PR & (1U << 13)) {
+        // EXTI_Line13 is pending
+        // Clear the pending bit
+        EXTI->PR = (1U << 13);
+        g_exti_flag = 1;
+    }
 }
 
 int main(void)
 {
+    /* Checkpoint before GPIO: add three file-scope objects and watch them after reset. */
+
     uint32_t result = 0;
 
     if (g_data == 0x12345678u && g_data_tail == 0x9ABCDEF0u)
@@ -50,9 +42,12 @@ int main(void)
 
     g_result = result;
 
-    gpio_init();
+    rcc_init();    // Enable GPIO and SYSCFG clocks
+    gpio_init();   // Set PA5 (LED Green LD2) to output and PC13 (button B1) to input and pull-up
+    exti_init();   // Map PC13 to EXTI_Line13 and set Falling trigger selection
 
     while (1) {
+        /* First implementation of the button press detection
         // Check if button (pull-up) is pressed
         if ((GPIOC->IDR & (1U << 13)) == 0) {
             // Button is pressed
@@ -60,6 +55,13 @@ int main(void)
         } else {
             // Button is not pressed
             GPIOA->BSRR |= (1U << 21); // bit 21: bit reset
+        }
+        */
+        // Second implementation of the button press detection using EXTI
+        if (g_exti_flag == 1) {
+            // Toggle LED on PA5
+            GPIOA->ODR ^= (1U << 5); // bit 5: bit toggle
+            g_exti_flag = 0;
         }
     }
 }

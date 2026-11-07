@@ -23,6 +23,6 @@ typedef struct {
 #define GPIOA ((GPIO_TypeDef *)GPIOA_BASE)
 #define GPIOC ((GPIO_TypeDef *)GPIOC_BASE)
 
-#define RCC_AHB1ENR *(volatile uint32_t *)(0x40023800 + 0x30)
+void gpio_init(void);
 
 #endif
