@@ -24,5 +24,6 @@ typedef struct {
 #define GPIOC ((GPIO_TypeDef *)GPIOC_BASE)
 
 void gpio_init(void);
+void gpio_tim2_ch1_pa5(void);
 
 #endif

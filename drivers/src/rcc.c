@@ -14,4 +14,10 @@ void rcc_init(void)
     // Force a read of RCC_APB2ENR to wait for clock to be ready
     clock_ready = RCC_APB2ENR;
     (void)clock_ready;
-}
+
+    // Enable TIM2 clock
+    RCC_APB1ENR |= (1U << 0); // bit 0: 1: TIM2 clock enabled
+
+    // Enable DMA1 clock
+    RCC_AHB1ENR |= (1U << 21); // bit 21: 1: DMA1 clock enabled
+}   
