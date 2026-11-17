@@ -35,3 +35,9 @@ add_app(01_pwm_led
     drivers/src/tim_pwm.c
     apps/01_pwm_led/main.c
 )
+
+add_app(02_pwm_dma
+    drivers/src/tim_pwm.c
+    drivers/src/dma.c
+    apps/02_pwm_dma/main.c
+)

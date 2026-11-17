@@ -1,7 +1,7 @@
 #include "tim2_5.h"
 
 /*
-initialize the TIM2 PWM mode 1
+initialize the TIM2 PWM mode 1 and stop the counter
 psc: prescaler
 arr: auto-reload register
 example:
@@ -41,8 +41,6 @@ void tim2_pwm_init(uint32_t psc, uint32_t arr)
     
     TIM2->SR &= ~(1U << 0); /* UIF = 0, clear the update interrupt flag */
 
-    // CEN = 1, starts counting from 0, TIM2 counter is enabled
-    TIM2->CR1 |= (1U << 0); // bit 0: CEN (Counter Enable)
 }
 
 

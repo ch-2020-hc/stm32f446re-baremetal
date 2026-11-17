@@ -38,6 +38,7 @@ int main(void)
     TIM2->SR &= ~(1U << 0);
     TIM2->DIER |= (1U << 0); /* UIE (Update Interrupt Enable) */
     NVIC_EnableIRQ(TIM2_IRQn);
+    TIM2->CR1 |= (1U << 0); // CEN = 1, starts counting from 0, TIM2 counter is enabled
 
     while (1) {
         /* TIM2 drives PA5. main stays here so it does not return to Reset_Handler. */
