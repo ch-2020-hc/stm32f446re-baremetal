@@ -15,7 +15,8 @@ typedef enum {
 
     /* -------------------  Processor Interrupt Numbers  -------------------------------- */
     TIM2_IRQn = 28,
-    EXTI15_10_IRQn = 40
+    SPI1_IRQn = 35,
+    EXTI15_10_IRQn = 40,
 } IRQn_Type;
 
 

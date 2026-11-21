@@ -41,3 +41,8 @@ add_app(02_pwm_dma
     drivers/src/dma.c
     apps/02_pwm_dma/main.c
 )
+
+add_app(03_spi_sensor
+    drivers/src/spi.c
+    apps/03_spi_sensor/main.c
+)

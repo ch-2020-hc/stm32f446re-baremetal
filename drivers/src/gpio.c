@@ -35,3 +35,63 @@ void gpio_tim2_ch1_pa5(void)
     GPIOA->AFRL &= ~(15U << 20);
     GPIOA->AFRL |= (1U << 20);
 }
+
+/*
+ * Project 2. PA5, PA6, and PA7 are SPI1_SCK, SPI1_MISO, and SPI1_MOSI, alternate function 5.
+ * PA5 is also LD2, so the LED follows SCK during a transfer.
+ */
+void gpio_spi1_pa5_pa6_pa7(void)
+{
+    /* MODER[11:10] = 10: PA5 alternate function. */
+    GPIOA->MODER &= ~(3U << 10);
+    GPIOA->MODER |= (2U << 10);
+    /* AFRL[23:20] = 0101: AF5, SPI1_SCK. */
+    GPIOA->AFRL &= ~(15U << 20);
+    GPIOA->AFRL |= (5U << 20);
+    /* OTYPER bit 5 = 0: push-pull. */
+    GPIOA->OTYPER &= ~(1U << 5);
+    /* OSPEEDR[11:10] = 11: very high speed. 10 would be high speed. */
+    GPIOA->OSPEEDR |= (3U << 10);
+
+    /* MODER[13:12] = 10: PA6 alternate function. */
+    GPIOA->MODER &= ~(3U << 12);
+    GPIOA->MODER |= (2U << 12);
+    /* AFRL[27:24] = 0101: AF5, SPI1_MISO. */
+    GPIOA->AFRL &= ~(15U << 24);
+    GPIOA->AFRL |= (5U << 24);
+    /* PUPDR[13:12] = 01: pull-up. 11 is reserved, not a pull. */
+    GPIOA->PUPDR &= ~(3U << 12);
+    GPIOA->PUPDR |= (1U << 12);
+
+    /* MODER[15:14] = 10: PA7 alternate function. */
+    GPIOA->MODER &= ~(3U << 14);
+    GPIOA->MODER |= (2U << 14);
+    /* AFRL[31:28] = 0101: AF5, SPI1_MOSI. */
+    GPIOA->AFRL &= ~(15U << 28);
+    GPIOA->AFRL |= (5U << 28);
+    /* OTYPER bit 7 = 0: push-pull. */
+    GPIOA->OTYPER &= ~(1U << 7);
+    /* OSPEEDR[15:14] = 11: very high speed. */
+    GPIOA->OSPEEDR |= (3U << 14);
+}
+
+/*
+ * Project 2. PB6 is the active-low chip select, as a GPIO output.
+ * SPI1 hardware NSS is PA4 or PA15, so this pin stays under software control.
+ */
+void gpio_spi1_pb6(void)
+{
+    /*
+     * BS6 is BSRR bit 6. Writing 1 drives PB6 high before MODER enables the
+     * output, so CS does not glitch low. BSRR avoids a read-modify-write of ODR.
+     */
+    GPIOB->BSRR = (1U << 6);
+
+    /* MODER[13:12] = 01: PB6 general-purpose output. */
+    GPIOB->MODER &= ~(3U << 12);
+    GPIOB->MODER |= (1U << 12);
+    /* OTYPER bit 6 = 0: push-pull. */
+    GPIOB->OTYPER &= ~(1U << 6);
+    /* OSPEEDR[13:12] = 11: very high speed. */
+    GPIOB->OSPEEDR |= (3U << 12);
+}

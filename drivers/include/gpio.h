@@ -18,12 +18,16 @@ typedef struct {
 
 /*Peripheral base addresses*/
 #define GPIOA_BASE 0x40020000
+#define GPIOB_BASE 0x40020400
 #define GPIOC_BASE 0x40020800
 
 #define GPIOA ((GPIO_TypeDef *)GPIOA_BASE)
+#define GPIOB ((GPIO_TypeDef *)GPIOB_BASE)
 #define GPIOC ((GPIO_TypeDef *)GPIOC_BASE)
 
 void gpio_init(void);
 void gpio_tim2_ch1_pa5(void);
+void gpio_spi1_pa5_pa6_pa7(void);
+void gpio_spi1_pb6(void);
 
 #endif
