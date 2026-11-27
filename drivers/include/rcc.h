@@ -14,6 +14,7 @@
 
 void rcc_init(void);
 void rcc_spi1_init(void);
+void rcc_can1_init(void);
 
 #endif
 

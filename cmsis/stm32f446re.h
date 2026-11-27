@@ -14,6 +14,10 @@ typedef enum {
     SysTick_IRQn                  =  -1,     /* 15 System Tick Interrupt */
 
     /* -------------------  Processor Interrupt Numbers  -------------------------------- */
+    CAN1_TX_IRQn = 19,
+    CAN1_RX0_IRQn = 20,
+    CAN1_RX1_IRQn = 21,
+    CAN1_SCE_IRQn = 22,
     TIM2_IRQn = 28,
     SPI1_IRQn = 35,
     EXTI15_10_IRQn = 40,

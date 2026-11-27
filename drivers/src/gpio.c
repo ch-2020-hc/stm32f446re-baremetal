@@ -95,3 +95,33 @@ void gpio_spi1_pb6(void)
     /* OSPEEDR[13:12] = 11: very high speed. */
     GPIOB->OSPEEDR |= (3U << 12);
 }
+
+/*
+ * Project 3. PB8 and PB9 are CAN1_RX and CAN1_TX, alternate function 9.
+ */
+void gpio_can1_pb8_pb9(void)
+{
+    GPIOB->MODER &= ~(15U << 16);
+    GPIOB->MODER |= (2U << 16) | (2U << 18);
+
+    /* PB8 is CAN1_RX. */
+    /* AFRH[3:0] = 1001: AF9, CAN1_RX. */
+    GPIOB->AFRH &= ~(15U << 0);
+    GPIOB->AFRH |= (9U << 0);
+    /* OTYPER bit 8 = 0: open-drain. */
+    GPIOB->OTYPER |= (1U << 8);
+    /* OSPEEDR[17:16] = 11: very high speed. */
+    GPIOB->OSPEEDR |= (3U << 16);
+    /* PUPDR[17:16] = 01: pull-up, make Rx recessive when not connected. */
+    GPIOB->PUPDR &= ~(3U << 16);
+    GPIOB->PUPDR |= (1U << 16);
+
+    /* PB9 is CAN1_TX. */
+    /* AFRH[7:4] = 1001: AF9, CAN1_TX. */
+    GPIOB->AFRH &= ~(15U << 4);
+    GPIOB->AFRH |= (9U << 4);
+    /* OTYPER bit 9 = 0: push-pull. */
+    GPIOB->OTYPER &= ~(1U << 9);
+    /* OSPEEDR[19:18] = 11: very high speed. */
+    GPIOB->OSPEEDR |= (3U << 18);
+}

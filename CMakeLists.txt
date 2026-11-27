@@ -51,3 +51,9 @@ add_app(04_spi_int
     drivers/src/spi.c
     apps/04_spi_int/main.c
 )
+
+add_app(06_can
+    drivers/src/tim_pwm.c
+    drivers/src/can.c
+    apps/06_can/main.c
+)
