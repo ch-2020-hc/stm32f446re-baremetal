@@ -10,7 +10,7 @@ volatile uint8_t g_spi_done;
  * *volatile: main stores the pointer, the ISR reads it. */
 static volatile uint8_t *volatile g_rx_ptr;
 /* static: private to spi.c. volatile: main uses it, the ISR reads it. */
-static volatile uint8_t g_tx[2]
+static volatile uint8_t g_tx[2];
 static volatile uint8_t g_len;
 static volatile uint8_t g_tx_count;
 static volatile uint8_t g_rx_count;
