@@ -46,3 +46,8 @@ add_app(03_spi_sensor
     drivers/src/spi.c
     apps/03_spi_sensor/main.c
 )
+
+add_app(04_spi_int
+    drivers/src/spi.c
+    apps/04_spi_int/main.c
+)

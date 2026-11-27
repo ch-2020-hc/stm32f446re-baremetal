@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+extern volatile uint8_t g_spi_done;
 
 typedef struct
 {
@@ -22,3 +23,4 @@ typedef struct
 void spi_init(void);
 uint8_t spi_exchange_byte(uint8_t tx);
 void spi_exchange(const uint8_t *tx, volatile uint8_t *rx, uint16_t len);
+void spi_exchange_interrupt(const uint8_t *tx, volatile uint8_t *rx, uint16_t len);
