@@ -31,18 +31,19 @@ This repository is one shared driver layer, built in the order the later labs de
 
 ## Status
 
-Stage 0, Project 1 through the DMA ramp, and the polling half of Project 2 are in the tree. `apps/01_pwm_led` steps the 1 kHz duty in the TIM2 update interrupt. `apps/02_pwm_dma` writes the same ramp from a RAM table through DMA1 while `main` sits in the loop. `apps/03_spi_sensor` reads an ADXL345 WHO_AM_I register on SPI1 by polling `TXE` and `RXNE`. The SPI interrupt and DMA styles, the servo, and CAN are still ahead. Publish in that order and tag `v0.1-exti`, `v0.2-pwm`, `v0.3-dma`, `v0.4-spi`, `v0.5-can`.
+Stage 0, Project 1 through the DMA ramp, and the polling and interrupt halves of Project 2 are in the tree. `apps/01_pwm_led` steps the 1 kHz duty in the TIM2 update interrupt. `apps/02_pwm_dma` writes the same ramp from a RAM table through DMA1 while `main` sits in the loop. `apps/03_spi_sensor` reads an ADXL345 WHO_AM_I register on SPI1 by polling `TXE` and `RXNE`. `apps/04_spi_int` reads the same two bytes from `SPI1_IRQHandler`, and `main` waits on `g_spi_done`. The SPI DMA style, the servo, and CAN are still ahead. Publish in that order and tag `v0.1-exti`, `v0.2-pwm`, `v0.3-dma`, `v0.4-spi`, `v0.5-can`.
 
 
-| Step                             | App                    | Extra hardware                                | What it shows                                 |
-| -------------------------------- | ---------------------- | --------------------------------------------- | --------------------------------------------- |
-| Stage 0, GPIO + EXTI             | `apps/00_blink_exti`   | None                                          | Linker, vector table, `volatile`. In the tree |
-| Project 1, PWM + update ISR      | `apps/01_pwm_led`      | None                                          | Timers, NVIC. In the tree                     |
-| Project 1, DMA ramp              | `apps/02_pwm_dma`      | None                                          | DMA. In the tree                              |
-| Project 1, servo                 | same timer driver      | Servo and 5 V                                 | 50 Hz, 1–2 ms pulse. Optional, not built      |
-| Project 2, SPI polling           | `apps/03_spi_sensor`   | ADXL345, or a stand-in on the same pins       | SPI1 master, mode 3, WHO_AM_I. In the tree    |
-| Project 2, SPI interrupt and DMA | same bus               | same part                                     | TXE/RXNE state machine, then DMA. Not built   |
-| Project 3, CAN                   | `apps/04_can_pwm_node` | TJA1050 or SN65HVD230, 120 Ω, USB-CAN adapter | Bit timing, one filter, mailboxes             |
+| Step                        | App                  | Extra hardware                          | What it shows                                      |
+| --------------------------- | -------------------- | --------------------------------------- | -------------------------------------------------- |
+| Stage 0, GPIO + EXTI        | `apps/00_blink_exti` | None                                    | Linker, vector table, `volatile`. In the tree      |
+| Project 1, PWM + update ISR | `apps/01_pwm_led`    | None                                    | Timers, NVIC. In the tree                          |
+| Project 1, DMA ramp         | `apps/02_pwm_dma`    | None                                    | DMA. In the tree                                   |
+| Project 1, servo            | same timer driver    | Servo and 5 V                           | 50 Hz, 1–2 ms pulse. Optional, not built           |
+| Project 2, SPI polling      | `apps/03_spi_sensor` | ADXL345, or a stand-in on the same pins | SPI1 master, mode 3, WHO_AM_I. In the tree         |
+| Project 2, SPI interrupt    | `apps/04_spi_int`    | same part                               | `TXE`/`RXNE` handler, `volatile` done flag. In the tree |
+| Project 2, SPI DMA          | same bus             | same part                               | DMA double buffer. Not built                       |
+| Project 3, CAN              | not built            | TJA1050 or SN65HVD230, 120 Ω, USB-CAN adapter | Bit timing, one filter, mailboxes             |
 
 
 A wrong `PSC` or SPI mode is invisible on the LED. `apps/01_pwm_led` has had the analyzer check: period measured 1.000 kHz, and the update interrupt moves the duty across a 2 s cycle. The DMA image has not. The SPI polling image has: SCK measured 1.000 MHz, mode 3, and the two-byte frame matched the program.
@@ -135,7 +136,7 @@ The register struct is `drivers/include/dma.h`. `drivers/src/dma.c` is the only 
 
 Goal: read the ADXL345 WHO_AM_I register with SPI1 as master, polling `TXE` and `RXNE`. `main` stays inside `spi_exchange` until both bytes have shifted.
 
-This image is the polling style. The `TXE`/`RXNE` state machine and the DMA double buffer are still ahead. Timers, the servo, and CAN are out of scope here.
+This image is the polling style. `apps/04_spi_int` is the `TXE`/`RXNE` handler for the same transfer. The DMA double buffer is still ahead. Timers, the servo, and CAN are out of scope here.
 
 
 | Signal    | Pin | Setup                                                         |
@@ -170,6 +171,23 @@ void spi_exchange(const uint8_t *tx, volatile uint8_t *rx, uint16_t len);
 
 The register struct is `drivers/include/spi.h`. `drivers/src/spi.c` is the only file that writes `CR1`, `SR`, and `DR`. `rcc_spi1_init()` enables SPI1 on APB2 and the GPIOA and GPIOB clocks. `SPI1_IRQn` is in the vector enum and is not enabled here.
 
+## Project 2 — `apps/04_spi_int`
+
+Goal: the same ADXL345 WHO_AM_I read, with `SPI1_IRQHandler` moving the bytes. `main` does not poll `TXE` or `RXNE`. It calls `spi_exchange_interrupt` and then waits in `__WFI()` until `g_spi_done` is 1.
+
+The pins, `spi_init`, the 1.000 MHz mode-3 frame, and the bytes `{0x80, 0x00}` are the ones in `apps/03_spi_sensor`. The analyzer capture recorded there is for the polling image. This image has not had its own capture. The DMA double buffer is still ahead.
+
+`spi_exchange_interrupt` copies the outgoing bytes into a private buffer, saves the caller's receive pointer, clears `g_spi_done`, and drops CS. It then enables `TXEIE`, `RXNEIE`, and `ERRIE`, and enables `SPI1_IRQn`. `TXE` is already 1, so the first write to `DR` happens in the handler.
+
+`SPI1_IRQHandler` writes the next byte while `TXE` is set, and turns `TXEIE` off after the last byte is queued so a stuck `TXE` does not re-enter. Each `RXNE` stores one byte. After the last received byte it turns the SPI interrupt enables off, raises CS once `BSY` is clear, and sets `g_spi_done`. `main` then copies `g_rx_msg[1]` to `g_whoami`. An overrun reads `DR` and then `SR`, which clears `OVR`, and also sets `g_spi_done`.
+
+`g_spi_done` is `volatile` because the handler writes it and `main` reads it.
+
+```c
+extern volatile uint8_t g_spi_done;
+void spi_exchange_interrupt(const uint8_t *tx, volatile uint8_t *rx, uint16_t len);
+```
+
 ## Build
 
 Tested with:
@@ -180,7 +198,7 @@ Tested with:
 
 Flags are Cortex-M4, Thumb, FPv4-SP-D16, hard float, `-O0 -g3`, and `-nostdlib`. The linker script is `ld/stm32f446re.ld`.
 
-`CMakeLists.txt` builds one image per app through `add_app`. Every image links `startup/startup.s`, `drivers/src/rcc.c`, and `drivers/src/gpio.c`. Stage 0 adds `exti.c` and `apps/00_blink_exti/main.c`. The PWM image adds `tim_pwm.c` and `apps/01_pwm_led/main.c`. The DMA image adds `tim_pwm.c`, `dma.c`, and `apps/02_pwm_dma/main.c`. The SPI image adds `spi.c` and `apps/03_spi_sensor/main.c`. Each new app is another image. The earlier ones stay in the same build.
+`CMakeLists.txt` builds one image per app through `add_app`. Every image links `startup/startup.s`, `drivers/src/rcc.c`, and `drivers/src/gpio.c`. Stage 0 adds `exti.c` and `apps/00_blink_exti/main.c`. The PWM image adds `tim_pwm.c` and `apps/01_pwm_led/main.c`. The DMA image adds `tim_pwm.c`, `dma.c`, and `apps/02_pwm_dma/main.c`. The SPI polling image adds `spi.c` and `apps/03_spi_sensor/main.c`. The SPI interrupt image adds `spi.c` and `apps/04_spi_int/main.c`. Each new app is another image. The earlier ones stay in the same build.
 
 ```sh
 cmake -S . -B build -G Ninja
@@ -196,6 +214,7 @@ cmake --build build
 | Project 1, PWM + interrupt | `build/01_pwm_led.elf`    | `build/01_pwm_led.bin`    |
 | Project 1, DMA ramp        | `build/02_pwm_dma.elf`    | `build/02_pwm_dma.bin`    |
 | Project 2, SPI polling     | `build/03_spi_sensor.elf` | `build/03_spi_sensor.bin` |
+| Project 2, SPI interrupt   | `build/04_spi_int.elf`    | `build/04_spi_int.bin`    |
 
 
 
@@ -238,7 +257,8 @@ stm32f446re-baremetal/
     01_pwm_led/main.c            # Project 1, PWM + update ISR
     02_pwm_dma/main.c            # Project 1, DMA ramp
     03_spi_sensor/main.c         # Project 2, SPI polling
-    04_can_pwm_node/             # Project 3
+    04_spi_int/main.c            # Project 2, SPI interrupt
+                                 # Project 3, CAN, is not in the tree yet
 ```
 
 Each app is a `main.c` plus the drivers `add_app` links for it. A driver header is the API. A driver source is the registers. The planned header is `can.h`. Host tests for the PWM divider, CAN ID pack/unpack, and `BTR` belong in `tests/` so they run without a board.
@@ -249,7 +269,7 @@ Each app is a `main.c` plus the drivers `add_app` links for it. A driver header 
 
 The PWM formula and the update interrupt are in `apps/01_pwm_led`, and a logic analyzer matched both: 1.000 kHz, and the duty ramp over 2 s. The SPI polling transfer is in Project 2 above, and its capture matches the 1.000 MHz calculation. The DMA image in `apps/02_pwm_dma` uses the same timer setup and still needs its own capture. The same rule applies to the next labs: calculate first, then show the capture.
 
-The other two SPI styles are still ahead on this same bus: a `TXE`/`RXNE` state machine that wakes `main` with a `volatile` done flag, then a DMA transfer into a double buffer. The optional servo is the same timer driver at 50 Hz, with a pulse of about 1–2 ms, on a 5 V supply that shares ground with the Nucleo. CAN follows the transceiver.
+`apps/04_spi_int` is that `TXE`/`RXNE` handler: `main` sleeps in `__WFI()` until `g_spi_done` is set. The SPI DMA transfer into a double buffer is still ahead on this same bus. The optional servo is the same timer driver at 50 Hz, with a pulse of about 1–2 ms, on a 5 V supply that shares ground with the Nucleo. CAN follows the transceiver.
 
 CAN at 500 kbit/s does not divide cleanly from a raw 16 MHz HSI. That lab moves the clock tree once, writes down `SYSCLK`, `PCLK1`, and the time quanta, then programs `BTR`. Flash wait states stay at 0 while `SYSCLK` is 16 MHz. 180 MHz needs voltage scale 1, over-drive, and 5 wait states in `FLASH_ACR`, and only after the SPI mode is already proven.
 
